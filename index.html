@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriTrack | Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    
+    <nav class="sidebar">
+        <div class="logo">🌿 NutriTrack</div>
+        <div class="nav-links">
+            <a href="index.html">🏠 Dashboard</a>
+            <a href="meals.html">🍽 Meals</a>
+            <a href="summary.html">📊 Summary</a>
+            <a href="goals.html">🎯 Goals</a>
+            <a href="progress.html">📈 Progress</a>
+            <a href="#" class="logout" onclick="logout()">🚪 Sign Out</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Welcome back, <span id="userName" style="color:var(--primary)"></span>!</h1>
+            <p style="color:var(--text-light); margin-top:8px;">Here's your health overview for today.</p>
+        </div>
+
+        <div class="metrics-row">
+            <div class="metric-card">
+                <h3>Current BMI</h3>
+                <p id="userBMI">--</p>
+            </div>
+            <div class="metric-card">
+                <h3>Estimated BMR</h3>
+                <p id="userBMR">--</p>
+            </div>
+            <div class="metric-card">
+                <h3>Daily Calorie Goal</h3>
+                <p id="userGoal">--</p>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔥 Calories</h2>
+                </div>
+                <div style="text-align:center; padding: 20px 0;">
+                    <div style="font-size:48px; font-weight:700; color:var(--primary)" id="calConsumed">0</div>
+                    <div style="color:var(--text-light)">Consumed kcal</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>💧 Water Tracker</h2>
+                </div>
+                <div class="water-controls">
+                    <button class="water-btn" onclick="updateWater(-1)">-</button>
+                    <div class="water-count"><span id="waterCount">0</span>/8</div>
+                    <button class="water-btn" onclick="updateWater(1)">+</button>
+                </div>
+                <div id="waterStatus" class="water-status status-low">
+                    ⚠️ Water is low<br>💧 Drink 8 more glasses
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <h2>🏃‍♂️ Quick Activity Log</h2>
+                    <span style="color:var(--text-light); font-weight:600;"><span id="actBurned">0</span> kcal burned today</span>
+                </div>
+                <div style="display:flex; gap:15px; margin-top:15px;">
+                    <input type="text" id="actName" class="form-control" placeholder="Activity (e.g. Running)">
+                    <input type="number" id="actDur" class="form-control" placeholder="Duration (mins)" style="width:150px">
+                    <button class="btn" style="width:auto;" onclick="addActivity()">Log</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
