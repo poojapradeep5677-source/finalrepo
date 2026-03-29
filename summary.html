@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriTrack | Summary</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    
+    <nav class="sidebar">
+        <div class="logo">🌿 NutriTrack</div>
+        <div class="nav-links">
+            <a href="index.html">🏠 Dashboard</a>
+            <a href="meals.html">🍽 Meals</a>
+            <a href="summary.html">📊 Summary</a>
+            <a href="goals.html">🎯 Goals</a>
+            <a href="progress.html">📈 Progress</a>
+            <a href="#" class="logout" onclick="logout()">🚪 Sign Out</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Daily Summary</h1>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2>📊 Calorie Breakdown</h2>
+                </div>
+                <div class="stats-row">
+                    <span>Calories Consumed</span>
+                    <span id="sumCalCons">0</span>
+                </div>
+                <div class="stats-row">
+                    <span>Calories Burned</span>
+                    <span id="sumCalBurn">0</span>
+                </div>
+                <div class="stats-row" style="border:none; margin-bottom:0">
+                    <span>Remaining Calories</span>
+                    <span id="sumCalRem">0</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>🥩 Macros</h2>
+                </div>
+                <div class="stats-row">
+                    <span>Protein</span>
+                    <span id="sumPro">0g</span>
+                </div>
+                <div class="stats-row">
+                    <span>Carbs</span>
+                    <span id="sumCarb">0g</span>
+                </div>
+                <div class="stats-row" style="border:none; margin-bottom:0">
+                    <span>Fat</span>
+                    <span id="sumFat">0g</span>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-header">
+                    <h2>🤖 AI Health Suggestions</h2>
+                </div>
+                <div id="aiSuggestions">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriTrack | Progress</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    
+    <nav class="sidebar">
+        <div class="logo">🌿 NutriTrack</div>
+        <div class="nav-links">
+            <a href="index.html">🏠 Dashboard</a>
+            <a href="meals.html">🍽 Meals</a>
+            <a href="summary.html">📊 Summary</a>
+            <a href="goals.html">🎯 Goals</a>
+            <a href="progress.html">📈 Progress</a>
+            <a href="#" class="logout" onclick="logout()">🚪 Sign Out</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Activity Progress</h1>
+        </div>
+
+        <div class="metrics-row">
+            <div class="metric-card">
+                <h3>Current BMI</h3>
+                <p id="progBMI">--</p>
+            </div>
+            <div class="metric-card">
+                <h3>BMR</h3>
+                <p id="progBMR">--</p>
+            </div>
+            <div class="metric-card">
+                <h3>Calorie Goal</h3>
+                <p id="progGoal">--</p>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2>📊 Calories Graph</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="calChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>📉 Weight Graph</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="weightChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
