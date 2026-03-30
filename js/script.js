@@ -70,15 +70,18 @@ function logout() {
 }
 
 function calcBMI(weight, heightStr) {
-    const height = parseFloat(heightStr) / 100;
-    return (parseFloat(weight) / (height * height)).toFixed(1);
+    const w = parseFloat(weight);
+    const h = parseFloat(heightStr) / 100;
+    if (!w || !h || h === 0) return '0.0';
+    return (w / (h * h)).toFixed(1);
 }
 
 function calcBMR(gender, weight, height, age) {
-    let bmr = 0;
     const w = parseFloat(weight);
     const h = parseFloat(height);
     const a = parseFloat(age);
+    if (!w || !h || !a) return 0;
+    let bmr = 0;
     if (gender === 'Male') {
         bmr = 88.362 + (13.397 * w) + (4.799 * h) - (5.677 * a);
     } else {
@@ -120,12 +123,11 @@ function initLogin() {
 
         const bmi = calcBMI(weight, height);
         const bmr = calcBMR(gender, weight, height, age);
-        const calGoal = Math.round(bmr * 1.55); // Moderate activity factor
+        const calGoal = Math.round(bmr * 1.55);
 
         const user = { name, age, height, weight, gender, bmi, bmr, calGoal };
         saveUser(user);
-        
-        // Add initial weight to history
+
         weightHistory = [{ date: new Date().toISOString().split('T')[0], weight: parseFloat(weight) }];
         saveWeight();
 
@@ -136,7 +138,7 @@ function initLogin() {
 // DASHBOARD
 function initDashboard() {
     if(!document.getElementById('userName')) return;
-    
+
     document.getElementById('userName').textContent = currentUser.name;
     document.getElementById('userBMI').textContent = currentUser.bmi;
     document.getElementById('userBMR').textContent = currentUser.bmr;
@@ -160,9 +162,9 @@ function updateWaterUI() {
     const el = document.getElementById('waterCount');
     const st = document.getElementById('waterStatus');
     if(!el || !st) return;
-    
+
     el.textContent = currentWater;
-    
+
     if (currentWater < 4) {
         st.innerHTML = `⚠️ Water is low<br>💧 Drink ${8 - currentWater} more glasses`;
         st.className = 'water-status status-low';
@@ -181,7 +183,7 @@ let selectedFood = null;
 
 function initMeals() {
     if(!document.getElementById('searchFood')) return;
-    
+
     renderMealList();
 
     // Tabs
@@ -198,7 +200,7 @@ function initMeals() {
     // Search
     const searchInput = document.getElementById('searchFood');
     const resultsDiv = document.getElementById('searchResults');
-    
+
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
         if (query.length < 2) {
@@ -207,7 +209,7 @@ function initMeals() {
         }
 
         const matches = (window.foodDatabase || []).filter(f => f.foodName.toLowerCase().includes(query));
-        
+
         if (matches.length > 0) {
             resultsDiv.innerHTML = matches.map((f, i) => `
                 <div class="search-item" onclick="selectFood(${i}, '${f.foodName.replace(/'/g, "\\'")}')">
@@ -222,13 +224,149 @@ function initMeals() {
     });
 }
 
-function simulateAIUpload() {
-    alert("AI Detection Simulated: Found 'Chicken biriyani'");
-    const fName = "Chicken biriyani";
-    const idx = window.foodDatabase.findIndex(f => f.foodName === fName);
-    if(idx > -1) {
-        selectFood(idx, fName);
+// =====================================================
+// AI FOOD DETECTION — TensorFlow.js MobileNet (100% browser)
+// Loads entirely from cdn.jsdelivr.net — no huggingface.co,
+// no API key, no CORS issues. Works on VS Code Live Server.
+// =====================================================
+
+let _tfModel = null;
+let _tfLoaded = false;
+
+async function loadTFModels() {
+    if (_tfLoaded) return;
+
+    // Dynamically inject TensorFlow.js + MobileNet scripts if not present
+    await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js");
+    await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js");
+
+    _tfModel = await window.mobilenet.load({ version: 2, alpha: 1.0 });
+    _tfLoaded = true;
+}
+
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error("Failed to load: " + src));
+        document.head.appendChild(s);
+    });
+}
+
+async function simulateAIUpload() {
+    const fileInput = document.getElementById("foodImage");
+    const file = fileInput ? fileInput.files[0] : null;
+
+    if (window.location.protocol === 'file:') {
+        alert("Please use VS Code Live Server.\nRight-click meals.html → Open with Live Server.");
+        return;
     }
+
+    if (!file) {
+        alert("Please select a food image first using \'Choose File\'.");
+        return;
+    }
+
+    if (!window.foodDatabase || window.foodDatabase.length === 0) {
+        alert("Food database not loaded. Make sure foods.js is included.");
+        return;
+    }
+
+    const aiBtn = document.querySelector('.ai-upload');
+    const originalContent = aiBtn.innerHTML;
+    aiBtn.style.pointerEvents = "none";
+
+    try {
+        if (!_tfLoaded) {
+            aiBtn.innerHTML = "⏳ Loading AI model...";
+            await loadTFModels();
+        }
+
+        aiBtn.innerHTML = "🔍 Detecting food...";
+
+        // Draw image onto a canvas so TF.js can read pixels
+        const img = await fileToImage(file);
+        const predictions = await _tfModel.classify(img, 10);
+        console.log("MobileNet top-10:", predictions);
+
+        // MobileNet returns ImageNet labels like "pizza, pizza pie"
+        // We extract all words and try matching against food DB
+        let matchedIdx = -1;
+        let matchedScore = 0;
+
+        for (const pred of predictions) {
+            // Labels like "pizza, pizza pie" — take all unique words
+            const words = pred.className.toLowerCase()
+                .split(/[,\/\s]+/)
+                .map(w => w.trim())
+                .filter(w => w.length > 2);
+
+            const idx = window.foodDatabase.findIndex(f => {
+                const db = f.foodName.toLowerCase();
+                return words.some(w => db.includes(w) || w.includes(db.split(" ")[0]));
+            });
+
+            if (idx > -1) {
+                matchedIdx = idx;
+                matchedScore = pred.probability;
+                break;
+            }
+        }
+
+        if (matchedIdx > -1) {
+            selectFood(matchedIdx, window.foodDatabase[matchedIdx].foodName);
+            showToast(
+                `✅ Detected: <strong>${window.foodDatabase[matchedIdx].foodName}</strong> — ${(matchedScore * 100).toFixed(1)}% confident`,
+                "#2ecc71"
+            );
+        } else {
+            const top = predictions[0].className;
+            alert(`AI detected "${top}" but it is not in your food database.\nPlease use the Search box to find it manually.`);
+        }
+
+    } catch (error) {
+        console.error("AI Detection Error:", error);
+        alert("AI Error: " + error.message + "\n\nMake sure you are using Live Server and have internet access.");
+    } finally {
+        aiBtn.innerHTML = originalContent;
+        aiBtn.style.pointerEvents = "auto";
+    }
+}
+
+function fileToImage(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+function showToast(html, bgColor = '#2ecc71') {
+    const existing = document.getElementById('nutritrack-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'nutritrack-toast';
+    toast.style.cssText = `
+        position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+        background: ${bgColor}; color: white; padding: 14px 20px;
+        border-radius: 10px; font-size: 14px; font-weight: 500;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.18); max-width: 300px;
+        transition: opacity 0.4s ease;
+    `;
+    toast.innerHTML = html;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 400);
+    }, 3500);
 }
 
 function showManualEntry() {
@@ -242,7 +380,7 @@ function selectFood(index, name) {
     selectedFood = window.foodDatabase[index];
     document.getElementById('searchFood').value = '';
     document.getElementById('searchResults').style.display = 'none';
-    
+
     document.getElementById('mealEntryForm').style.display = 'block';
     document.getElementById('selectedFoodName').textContent = name;
     document.getElementById('foodWeight').value = 100;
@@ -263,10 +401,9 @@ function addMealEntry() {
         entry.carbs = selectedFood.carbs * factor;
         entry.fat = selectedFood.fat * factor;
     } else {
-        // Manual entry fallback - simplified logic
         entry.name = document.getElementById('selectedFoodName').textContent;
         entry.weight = weight;
-        entry.calories = weight * 1.5; // dummy calculation
+        entry.calories = weight * 1.5;
         entry.protein = weight * 0.1;
         entry.carbs = weight * 0.2;
         entry.fat = weight * 0.05;
@@ -312,7 +449,7 @@ function renderMealList() {
 // SUMMARY
 function initSummary() {
     if(!document.getElementById('sumCalCons')) return;
-    
+
     const numItems = getDailyNutrition();
     const burned = getActivityCalories();
     const remaining = currentUser.calGoal - numItems.cal + burned;
@@ -320,12 +457,11 @@ function initSummary() {
     document.getElementById('sumCalCons').textContent = Math.round(numItems.cal);
     document.getElementById('sumCalBurn').textContent = Math.round(burned);
     document.getElementById('sumCalRem').textContent = Math.round(remaining);
-    
+
     document.getElementById('sumPro').textContent = Math.round(numItems.pro) + 'g';
     document.getElementById('sumCarb').textContent = Math.round(numItems.carbs) + 'g';
     document.getElementById('sumFat').textContent = Math.round(numItems.fat) + 'g';
 
-    // AI Suggestions
     let sugHtml = '';
     if (numItems.pro < 50) {
         sugHtml += `<div class="suggestion-box warning">💪 Eat eggs or dal to boost protein!</div>`;
@@ -339,14 +475,14 @@ function initSummary() {
     if (numItems.cal === 0) {
         sugHtml += `<div class="suggestion-box info">Please log your meals to get insights.</div>`;
     }
-    
+
     document.getElementById('aiSuggestions').innerHTML = sugHtml;
 }
 
 // GOALS
 function initGoals() {
     if(!document.getElementById('weightHistory')) return;
-    
+
     document.getElementById('startWeight').textContent = (weightHistory[0]?.weight || 0) + ' kg';
     document.getElementById('currentWeight').textContent = (weightHistory[weightHistory.length-1]?.weight || 0) + ' kg';
 
@@ -361,12 +497,11 @@ function logWeight() {
             weight: w
         });
         saveWeight();
-        
-        // Update current weight in user obj too
+
         currentUser.weight = w;
         currentUser.bmi = calcBMI(w, currentUser.height);
         saveUser(currentUser);
-        
+
         document.getElementById('currentWeight').textContent = w + ' kg';
         renderWeightHistory();
         document.getElementById('newWeight').value = '';
@@ -384,7 +519,6 @@ function renderWeightHistory() {
     `).join('');
 }
 
-
 // PROGRESS (Requires Chart.js)
 function initProgress() {
     if(typeof Chart === 'undefined') {
@@ -401,7 +535,6 @@ function initProgress() {
     const nut = getDailyNutrition();
     const burned = getActivityCalories();
 
-    // Chart 1: Calories Breakdown
     const ctxC = document.getElementById('calChart').getContext('2d');
     new Chart(ctxC, {
         type: 'bar',
@@ -419,7 +552,6 @@ function initProgress() {
         }
     });
 
-    // Chart 2: Weight Trend
     const ctxW = document.getElementById('weightChart').getContext('2d');
     const dates = weightHistory.map(w => w.date);
     const weights = weightHistory.map(w => w.weight);
@@ -443,13 +575,13 @@ function initProgress() {
     });
 }
 
-// Activity logic (applies across layout depending on where form is, adding it to dashboard)
+// Activity
 function addActivity() {
     const name = document.getElementById('actName').value;
     const dur = parseInt(document.getElementById('actDur').value);
     if(name && dur > 0) {
-        // Simple rough calc: 5 cals per minute of generic activity
-        const burn = dur * 5; 
+        const burn = dur * 5;
+
         currentActivities.push({
             id: Date.now(),
             name,
@@ -459,8 +591,7 @@ function addActivity() {
         saveActivity();
         document.getElementById('actName').value = '';
         document.getElementById('actDur').value = '';
-        
-        // Refresh dashboard numbers if on dashboard
+
         if(document.getElementById('actBurned')) {
             initDashboard();
         }
