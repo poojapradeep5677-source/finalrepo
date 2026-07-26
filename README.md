@@ -48,7 +48,3 @@ cd finalrepo
 
 
 2. Open `index.html` in any web browser to run the application.
-
-```
-
-```
